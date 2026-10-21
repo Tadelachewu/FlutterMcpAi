@@ -1,0 +1,97 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'ui/calculator_screen.dart';
+import 'ui/chat_screen.dart';
+import 'ui/navigation.dart';
+
+const Color _seed = Color(0xFF0EA5E9);
+
+ThemeData buildTheme(Brightness brightness) {
+  final scheme = ColorScheme.fromSeed(seedColor: _seed, brightness: brightness);
+  return ThemeData(
+    colorScheme: scheme,
+    useMaterial3: true,
+    scaffoldBackgroundColor: brightness == Brightness.dark
+        ? const Color(0xFF0B1220)
+        : scheme.surface,
+    visualDensity: VisualDensity.standard,
+  );
+}
+
+class CalculatorApp extends ConsumerWidget {
+  const CalculatorApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    return MaterialApp(
+      title: 'AI Scientific Calculator',
+      debugShowCheckedModeBanner: false,
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode: themeMode,
+      home: const HomeShell(),
+    );
+  }
+}
+
+/// Side-by-side on wide screens (tablets, desktop), tabs on phones.
+class HomeShell extends ConsumerWidget {
+  const HomeShell({super.key});
+
+  static const double splitBreakpoint = 900;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tab = ref.watch(homeTabProvider);
+    final wide = MediaQuery.sizeOf(context).width >= splitBreakpoint;
+    final dark = ref.watch(themeModeProvider) == ThemeMode.dark;
+
+    final appBar = AppBar(
+      title: const Text('AI Scientific Calculator'),
+      actions: [
+        IconButton(
+          tooltip: dark ? 'Switch to light theme' : 'Switch to dark theme',
+          icon: Icon(dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+          onPressed: ref.read(themeModeProvider.notifier).toggle,
+        ),
+      ],
+    );
+
+    if (wide) {
+      return Scaffold(
+        appBar: appBar,
+        body: const Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(width: 460, child: CalculatorScreen()),
+            VerticalDivider(width: 1),
+            Expanded(child: ChatScreen()),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: appBar,
+      body: IndexedStack(index: tab.index, children: const [CalculatorScreen(), ChatScreen()]),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tab.index,
+        onDestinationSelected: (i) => ref.read(homeTabProvider.notifier).show(HomeTab.values[i]),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.calculate_outlined),
+            selectedIcon: Icon(Icons.calculate),
+            label: 'Calculator',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'AI Chat',
+          ),
+        ],
+      ),
+    );
+  }
+}
