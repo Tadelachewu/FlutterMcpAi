@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../chat/chat_controller.dart';
 import '../chat/chat_models.dart';
+import '../voice/voice.dart';
 import 'widgets/badge.dart';
 import 'widgets/status_pill.dart';
 import 'widgets/tool_activity.dart';
@@ -40,8 +41,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _send([String? text]) {
     final value = text ?? _input.text;
     if (value.trim().isEmpty || ref.read(chatControllerProvider).busy) return;
+    ref.read(speechOutputProvider).stop();
     ref.read(chatControllerProvider.notifier).send(value);
     if (text == null) _input.clear();
+  }
+
+  /// Mic button: dictate into the text box. In sound mode the question is sent when you stop.
+  Future<void> _toggleMic() async {
+    final voice = ref.read(voiceProvider.notifier);
+    if (ref.read(voiceProvider).listening) {
+      await voice.stop();
+      return;
+    }
+    await voice.start((words, isFinal) {
+      if (!mounted) return;
+      _input.value = TextEditingValue(
+        text: words,
+        selection: TextSelection.collapsed(offset: words.length),
+      );
+      if (isFinal && ref.read(soundModeProvider) && words.trim().isNotEmpty) _send();
+    });
+  }
+
+  /// In sound mode, reads the finished answer (or its error) aloud.
+  void _speakFinished(ChatState? previous, ChatState next) {
+    if (!ref.read(soundModeProvider) || previous == null || !previous.busy || next.busy) return;
+    if (next.messages.isEmpty) return;
+    final last = next.messages.last;
+    if (last.isUser || last.errorCode == 'cancelled') return;
+    final text = speakableText(last.error ?? last.content);
+    if (text.isNotEmpty) ref.read(speechOutputProvider).speak(text);
   }
 
   void _scrollToEnd() {
@@ -59,7 +88,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(chatControllerProvider);
-    ref.listen(chatControllerProvider, (_, _) => _scrollToEnd());
+    ref.listen(chatControllerProvider, (previous, next) {
+      _scrollToEnd();
+      _speakFinished(previous, next);
+    });
+    final voiceError = ref.watch(voiceProvider.select((v) => v.error));
+    final listening = ref.watch(voiceProvider.select((v) => v.listening));
+    final soundMode = ref.watch(soundModeProvider);
     final theme = Theme.of(context);
 
     return Column(
@@ -69,6 +104,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           child: Row(
             children: [
               const Expanded(child: HealthPills()),
+              IconButton(
+                tooltip: soundMode
+                    ? 'Sound mode on: answers are read aloud. Tap to turn off.'
+                    : 'Sound mode off. Tap to have answers read aloud.',
+                isSelected: soundMode,
+                onPressed: ref.read(soundModeProvider.notifier).toggle,
+                icon: const Icon(Icons.volume_off_outlined),
+                selectedIcon: const Icon(Icons.volume_up),
+              ),
               IconButton(
                 tooltip: 'Clear chat',
                 onPressed: chat.messages.isEmpty || chat.busy
@@ -117,6 +161,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ),
         ),
+        // Shown next to the mic instead of a snackbar, which would cover the input row.
+        if (voiceError != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            padding: const EdgeInsets.only(left: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.mic_off, size: 18, color: theme.colorScheme.onErrorContainer),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      voiceError,
+                      style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Dismiss',
+                  onPressed: ref.read(voiceProvider.notifier).clearError,
+                  icon: Icon(Icons.close, color: theme.colorScheme.onErrorContainer),
+                ),
+              ],
+            ),
+          ),
         SafeArea(
           top: false,
           child: Padding(
@@ -136,7 +210,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _send(),
                       decoration: InputDecoration(
-                        hintText: 'Ask a calculation question…',
+                        hintText: listening ? 'Listening…' : 'Ask a calculation question…',
                         counterText: '',
                         border: const OutlineInputBorder(),
                         isDense: true,
@@ -144,6 +218,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         fillColor: theme.colorScheme.surfaceContainerHigh,
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 48,
+                  width: 48,
+                  child: IconButton.filledTonal(
+                    tooltip: listening ? 'Stop listening' : 'Speak your question',
+                    onPressed: chat.busy ? null : _toggleMic,
+                    style: listening
+                        ? IconButton.styleFrom(
+                            backgroundColor: theme.colorScheme.errorContainer,
+                            foregroundColor: theme.colorScheme.onErrorContainer,
+                          )
+                        : null,
+                    icon: Icon(listening ? Icons.mic : Icons.mic_none),
                   ),
                 ),
                 const SizedBox(width: 8),

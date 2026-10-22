@@ -127,6 +127,18 @@ configured in Xcode.
 - **Stop** closes the HTTP connection, and the server stops its work.
 - Non-200 responses are shown using the server's `message`. Message contents are never logged.
 
+### Voice and sound mode
+
+- **Mic button** (next to Send): speak your question. The words appear in the text box as you talk;
+  listening stops after a 3 s pause (or tap the mic again).
+- **Sound mode** (speaker button in the chat header): spoken questions are sent as soon as you stop
+  talking, and answers (or errors) are read aloud. With sound mode off, the mic only fills the text
+  box so you can check it before sending.
+- Uses the device's own speech recognition and text-to-speech (on Android, the Google app's speech
+  services), in the phone's language. Android asks for microphone permission the first time; iOS
+  shows the usage texts from `Info.plist`. If nothing was heard, or the permission is missing, a
+  notice appears above the input row. Code: [`lib/voice/voice.dart`](lib/voice/voice.dart).
+
 Badges: `✓ Verified by MCP tool: <names>`; `⚠ The MCP tool returned an error`; `⚠ No calculator
 tool was used`; `AI unavailable — computed directly via MCP`. The status pills come from
 `GET /api/health`; tap one to re-check. The sun/moon button in the top bar switches between the
@@ -172,6 +184,8 @@ flutter test
 | `test/chat_controller_test.dart` | Streaming state machine: tools, badges, history trimming, Stop, `busy`, unexpected end, slow notice |
 | `test/keypad_widget_test.dart` | Keypad input, preview, `=` behavior, ⌫, DEG/RAD, history, keyboard, semantic labels, "Explain with AI" |
 | `test/chat_screen_widget_test.dart`, `test/app_shell_widget_test.dart` | Chat UI, badges, Stop, errors, phone layout, accessibility of answers |
+| `test/voice_chat_test.dart` | Mic dictation, sound mode auto-send and spoken answers, unavailable mic, recognizer errors (fake speech services) |
+| `test/calculator_layout_test.dart` | Display pinned and all keys on screen at six phone/tablet sizes |
 | `test/platform_config_test.dart` | Cleartext exceptions exist in debug configurations only |
 
 ## Project layout

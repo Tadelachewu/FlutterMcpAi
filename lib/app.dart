@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ui/calculator_screen.dart';
 import 'ui/chat_screen.dart';
 import 'ui/navigation.dart';
+import 'ui/widgets/curved_nav_bar.dart';
 
 const Color _seed = Color(0xFF0EA5E9);
 
@@ -155,19 +156,19 @@ class HomeShell extends ConsumerWidget {
     return Scaffold(
       appBar: appBar,
       body: pages,
-      bottomNavigationBar: NavigationBar(
-        height: shortScreen ? 64 : null,
+      bottomNavigationBar: CurvedNavBar(
+        compact: shortScreen,
         selectedIndex: tab.index,
-        onDestinationSelected: select,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.calculate_outlined),
-            selectedIcon: Icon(Icons.calculate),
+        onSelected: select,
+        items: const [
+          CurvedNavItem(
+            icon: Icons.calculate_outlined,
+            selectedIcon: Icons.calculate,
             label: 'Calculator',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
+          CurvedNavItem(
+            icon: Icons.chat_bubble_outline,
+            selectedIcon: Icons.chat_bubble,
             label: 'AI Chat',
           ),
         ],

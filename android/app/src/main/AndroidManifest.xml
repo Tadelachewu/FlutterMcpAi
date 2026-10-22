@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Needed for the AI chat in release builds; the keypad works without network. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Voice questions in the AI chat (asked at runtime the first time the mic is used). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="AI Calculator"
         android:name="${applicationName}"
@@ -42,6 +44,13 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+: find the device's speech recognizer and text-to-speech engine. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
     </queries>
 </manifest>

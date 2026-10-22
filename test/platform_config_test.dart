@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 String _withoutAts(String plist) => plist
+    .replaceAll(String.fromCharCode(13), '')
     .replaceAll(RegExp(r'<!--.*?-->\s*', dotAll: true), '')
     .replaceAll(
       RegExp(r'\t<key>NSAppTransportSecurity</key>\s*<dict>.*?\n\t</dict>\n', dotAll: true),
