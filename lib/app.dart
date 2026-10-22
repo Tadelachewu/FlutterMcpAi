@@ -12,9 +12,8 @@ ThemeData buildTheme(Brightness brightness) {
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
-    scaffoldBackgroundColor: brightness == Brightness.dark
-        ? const Color(0xFF0B1220)
-        : scheme.surface,
+    // Transparent so the background image (see AppBackground) shows behind every screen.
+    scaffoldBackgroundColor: Colors.transparent,
     visualDensity: VisualDensity.standard,
   );
 }
@@ -31,7 +30,41 @@ class CalculatorApp extends ConsumerWidget {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: themeMode,
+      builder: (context, child) => AppBackground(child: child!),
       home: const HomeShell(),
+    );
+  }
+}
+
+/// The app_icon1.png photo behind all screens, under a tint that keeps text and keys readable.
+class AppBackground extends StatelessWidget {
+  const AppBackground({super.key, required this.child});
+
+  static const String image = 'assets/icon/app_icon1.png';
+
+  /// How much of the theme's background color covers the photo (0 = photo only, 1 = no photo).
+  static const double tint = 0.78;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final base = dark ? const Color(0xFF0B1220) : Theme.of(context).colorScheme.surface;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: base),
+        Image.asset(
+          image,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          excludeFromSemantics: true,
+          gaplessPlayback: true,
+        ),
+        ColoredBox(color: base.withValues(alpha: tint)),
+        child,
+      ],
     );
   }
 }
