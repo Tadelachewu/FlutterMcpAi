@@ -28,6 +28,16 @@ Future<void> tapKeys(WidgetTester tester, List<String> semanticLabels) async {
   }
 }
 
+Future<void> openHistory(WidgetTester tester) async {
+  await tester.tap(find.textContaining('History'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> closeSheet(WidgetTester tester) async {
+  await tester.tapAt(const Offset(10, 10));
+  await tester.pumpAndSettle();
+}
+
 String displayText(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(const Key('display-expression'))).data!;
 
@@ -47,6 +57,8 @@ void main() {
     await tapKeys(tester, ['Equals']);
     expect(displayText(tester), '3000');
     expect(find.text('125×24 ='), findsOneWidget);
+    expect(find.text('History (1)'), findsOneWidget);
+    await openHistory(tester);
     expect(find.text('= 3000'), findsOneWidget); // history entry
   });
 
@@ -76,12 +88,15 @@ void main() {
     await tapKeys(tester, ['Sine', '3', '0', 'Close parenthesis']);
     expect(previewText(tester), '= 0.5');
     await tapKeys(tester, ['Equals']);
+    await openHistory(tester);
     expect(find.text('sin(30)  deg', findRichText: true), findsOneWidget);
+    await closeSheet(tester);
 
     await tester.tap(find.bySemanticsLabel(RegExp('Angle unit: degrees')));
     await tester.pump();
     expect(find.text('RAD'), findsOneWidget);
     await tapKeys(tester, ['Sine', '0', 'Close parenthesis', 'Equals']);
+    await openHistory(tester);
     expect(find.text('sin(0)  rad', findRichText: true), findsOneWidget);
   });
 
@@ -101,8 +116,11 @@ void main() {
     await pumpCalculator(tester);
     await tapKeys(tester, ['6', 'Multiply', '7', 'Equals', 'Clear all']);
     expect(displayText(tester), '0');
+    await openHistory(tester);
     await tester.tap(find.bySemanticsLabel(RegExp(r'^6\*7 equals 42')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    // The sheet closes and the result is back in the display.
+    expect(find.byType(BottomSheet), findsNothing);
     expect(displayText(tester), '42');
   });
 

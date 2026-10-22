@@ -78,10 +78,17 @@ class HomeShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(homeTabProvider);
-    final wide = MediaQuery.sizeOf(context).width >= splitBreakpoint;
+    final size = MediaQuery.sizeOf(context);
+    // Side by side only when there is room for both panes at full height (tablets, desktop).
+    final wide = size.width >= splitBreakpoint && size.height >= 600;
+    // Phones in landscape: a side rail and a lower app bar leave more height for the keypad.
+    final landscape = !wide && size.width > size.height;
+    // Small phones: slightly lower bars so the keypad keeps comfortable key sizes.
+    final shortScreen = size.height < 720;
     final dark = ref.watch(themeModeProvider) == ThemeMode.dark;
 
     final appBar = AppBar(
+      toolbarHeight: landscape ? 44 : (shortScreen ? 52 : null),
       title: const Text('AI Scientific Calculator'),
       actions: [
         IconButton(
@@ -106,12 +113,52 @@ class HomeShell extends ConsumerWidget {
       );
     }
 
+    final pages = IndexedStack(
+      index: tab.index,
+      children: const [CalculatorScreen(), ChatScreen()],
+    );
+    void select(int i) => ref.read(homeTabProvider.notifier).show(HomeTab.values[i]);
+
+    if (landscape) {
+      return Scaffold(
+        appBar: appBar,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: tab.index,
+                onDestinationSelected: select,
+                labelType: NavigationRailLabelType.all,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.calculate_outlined),
+                    selectedIcon: Icon(Icons.calculate),
+                    label: Text('Calculator'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.chat_bubble_outline),
+                    selectedIcon: Icon(Icons.chat_bubble),
+                    label: Text('AI Chat'),
+                  ),
+                ],
+              ),
+              Expanded(child: pages),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: appBar,
-      body: IndexedStack(index: tab.index, children: const [CalculatorScreen(), ChatScreen()]),
+      body: pages,
       bottomNavigationBar: NavigationBar(
+        height: shortScreen ? 64 : null,
         selectedIndex: tab.index,
-        onDestinationSelected: (i) => ref.read(homeTabProvider.notifier).show(HomeTab.values[i]),
+        onDestinationSelected: select,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.calculate_outlined),

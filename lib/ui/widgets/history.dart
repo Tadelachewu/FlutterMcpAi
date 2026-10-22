@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../calculator/calculator_controller.dart';
 import '../../calculator/format.dart';
@@ -101,3 +102,36 @@ class HistoryPanel extends StatelessWidget {
     );
   }
 }
+
+/// Opens the history in a bottom sheet. Choosing an entry reuses its result and closes the sheet.
+Future<void> showHistorySheet(BuildContext context) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  useSafeArea: true,
+  builder: (context) => DraggableScrollableSheet(
+    expand: false,
+    initialChildSize: 0.6,
+    minChildSize: 0.3,
+    maxChildSize: 0.9,
+    builder: (context, scrollController) => Consumer(
+      builder: (context, ref, _) {
+        final calc = ref.read(calculatorProvider.notifier);
+        return ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          children: [
+            HistoryPanel(
+              entries: ref.watch(calculatorProvider.select((s) => s.history)),
+              onSelect: (entry) {
+                calc.useHistoryEntry(entry);
+                Navigator.of(context).pop();
+              },
+              onClear: calc.clearHistory,
+            ),
+          ],
+        );
+      },
+    ),
+  ),
+);

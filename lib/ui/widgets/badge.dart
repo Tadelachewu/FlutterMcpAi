@@ -29,7 +29,11 @@ class VerificationBadge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: color.withValues(alpha: 0.12),
+          // Tint over a solid base, so the text stays readable on the background photo.
+          color: Color.alphaBlend(
+            color.withValues(alpha: 0.14),
+            Theme.of(context).colorScheme.surfaceContainerHigh,
+          ),
           border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Text(

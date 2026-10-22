@@ -71,14 +71,12 @@ class CalcKey extends StatelessWidget {
     super.key,
     required this.def,
     required this.onPressed,
-    required this.height,
     this.label,
     this.semanticLabel,
   });
 
   final KeyDef def;
   final VoidCallback onPressed;
-  final double height;
 
   /// Overrides for keys whose text depends on state (the DEG/RAD toggle).
   final String? label;
@@ -108,38 +106,49 @@ class CalcKey extends StatelessWidget {
       label: semanticLabel ?? def.semanticLabel,
       onTap: press,
       excludeSemantics: true,
-      child: SizedBox(
-        height: height,
-        child: Material(
-          color: background,
-          borderRadius: BorderRadius.circular(14),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: press,
-            child: Center(
-              child: Text(
-                label ?? def.label,
-                style: TextStyle(
-                  color: foreground,
-                  fontSize: large ? 24 : 16,
-                  fontWeight: def.kind == KeyKind.equals ? FontWeight.w600 : FontWeight.w500,
+      // Fills whatever cell the grid gives it; the label scales with the key's height.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final h = constraints.maxHeight.isFinite ? constraints.maxHeight : 56.0;
+          final fontSize = large ? (h * 0.42).clamp(14.0, 26.0) : (h * 0.34).clamp(11.0, 18.0);
+          return Material(
+            color: background,
+            borderRadius: BorderRadius.circular(h < 40 ? 10 : 14),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: press,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label ?? def.label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: fontSize,
+                        fontWeight: def.kind == KeyKind.equals ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-/// Lays out [keys] in rows of [columns] units, honouring each key's span.
+/// Lays out [keys] in rows of [columns] units, honouring each key's span. The rows share the
+/// grid's height equally, so the grid needs a bounded height (e.g. inside an Expanded).
 class KeyGrid extends StatelessWidget {
   const KeyGrid({
     super.key,
     required this.keys,
     required this.onKey,
-    required this.keyHeight,
     required this.semanticLabel,
     this.columns = 5,
     this.spacing = 8,
@@ -149,15 +158,13 @@ class KeyGrid extends StatelessWidget {
 
   final List<KeyDef> keys;
   final void Function(KeyDef key) onKey;
-  final double keyHeight;
   final String semanticLabel;
   final int columns;
   final double spacing;
   final String? Function(KeyDef key)? labelFor;
   final String? Function(KeyDef key)? semanticLabelFor;
 
-  @override
-  Widget build(BuildContext context) {
+  static List<List<KeyDef>> rowsOf(List<KeyDef> keys, [int columns = 5]) {
     final rows = <List<KeyDef>>[];
     var current = <KeyDef>[];
     var used = 0;
@@ -171,7 +178,12 @@ class KeyGrid extends StatelessWidget {
       used += key.span;
     }
     if (current.isNotEmpty) rows.add(current);
+    return rows;
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final rows = rowsOf(keys, columns);
     return Semantics(
       container: true,
       label: semanticLabel,
@@ -179,22 +191,24 @@ class KeyGrid extends StatelessWidget {
         children: [
           for (var r = 0; r < rows.length; r++) ...[
             if (r > 0) SizedBox(height: spacing),
-            Row(
-              children: [
-                for (var i = 0; i < rows[r].length; i++) ...[
-                  if (i > 0) SizedBox(width: spacing),
-                  Expanded(
-                    flex: rows[r][i].span,
-                    child: CalcKey(
-                      def: rows[r][i],
-                      height: keyHeight,
-                      label: labelFor?.call(rows[r][i]),
-                      semanticLabel: semanticLabelFor?.call(rows[r][i]),
-                      onPressed: () => onKey(rows[r][i]),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < rows[r].length; i++) ...[
+                    if (i > 0) SizedBox(width: spacing),
+                    Expanded(
+                      flex: rows[r][i].span,
+                      child: CalcKey(
+                        def: rows[r][i],
+                        label: labelFor?.call(rows[r][i]),
+                        semanticLabel: semanticLabelFor?.call(rows[r][i]),
+                        onPressed: () => onKey(rows[r][i]),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ],

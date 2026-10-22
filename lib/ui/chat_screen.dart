@@ -135,11 +135,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       maxLength: maxMessageChars,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Ask a calculation question…',
                         counterText: '',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         isDense: true,
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHigh,
                       ),
                     ),
                   ),
@@ -182,8 +184,14 @@ class _EmptyChat extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
+        // Solid card so the text stays readable on the background photo.
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Text(
           'Ask in plain language. The AI on the server picks a calculator tool, the server runs it '
           'through MCP, and the answer is based on the tool’s result.',
